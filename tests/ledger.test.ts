@@ -54,10 +54,14 @@ describe("tamper-evident-audit-ledger", () => {
       { privateKeyPem: kp.privateKeyPem, keyId: kp.keyId }
     );
 
+    // Correct key => should verify
     const ok = await verifyStore(store, { publicKeyPem: kp.publicKeyPem });
     expect(ok.ok).toBe(true);
 
-    const bad = await verifyStore(store, { publicKeyPem: kp.publicKeyPem + " " });
+    // Different key => signature must fail deterministically
+    const kp2 = createKeyPair();
+    const bad = await verifyStore(store, { publicKeyPem: kp2.publicKeyPem });
     expect(bad.ok).toBe(false);
+    expect(bad.firstError?.reason).toBe("invalid_signature");
   });
 });
