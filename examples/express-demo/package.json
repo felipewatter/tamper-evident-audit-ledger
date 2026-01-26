@@ -1,0 +1,13 @@
+{
+  "name": "audit-ledger-express-demo",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "tamper-evident-audit-ledger": "file:../.."
+  }
+}
