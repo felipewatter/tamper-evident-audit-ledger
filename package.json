@@ -1,6 +1,6 @@
 {
   "name": "tamper-evident-audit-ledger",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tamper-evident (hash-chained) audit log for Node.js/TypeScript with optional Ed25519 signatures + CLI verifier.",
   "license": "MIT",
   "author": "Felipe Watter",
@@ -34,7 +34,7 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/postbuild.js",
@@ -44,7 +44,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "audit:deps": "npm audit --audit-level=high"
+    "audit:deps": "npm audit --audit-level=high",
+    "prepare": "npm run build",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "commander": "^12.1.0"

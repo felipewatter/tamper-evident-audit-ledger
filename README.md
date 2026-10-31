@@ -107,7 +107,7 @@ console.log(result.ok); // true
 ## ⚙️ Supported files
 
 - `audit.log` (JSON Lines / `.jsonl`) — append-only ledger file
-- Works with Node.js 20+ (TypeScript library + CLI)
+- Works with Node.js 22+ (TypeScript library + CLI)
 
 * * *
 
