@@ -17,8 +17,11 @@ jobs:
           node-version: '22'
       - name: Refresh outdated vulnerable test tooling
         run: |
-          npm install --save-dev 'vitest@^4.1.12' --ignore-scripts --no-audit --no-fund
-          npm audit fix --ignore-scripts --no-fund
+          npm install --global npm@11 --no-audit --no-fund
+          npm pkg set 'devDependencies.vitest=^4.1.12'
+          rm -f package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit fix --package-lock-only --ignore-scripts --no-fund
           npm audit --audit-level=high
       - name: Persist updated package lock via restricted branch
         run: |
