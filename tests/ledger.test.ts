@@ -64,4 +64,56 @@ describe("tamper-evident-audit-ledger", () => {
     expect(bad.ok).toBe(false);
     expect(bad.firstError?.reason).toBe("invalid_signature");
   });
+
+  test("missing ledger is not a verified empty history", async () => {
+    const result = await verifyStore(new FileStore(tmpFile("missing.jsonl")));
+    expect(result.ok).toBe(false);
+    expect(result.firstError?.reason).toBe("store_missing");
+  });
+
+  test("refuses to append to tampered chain", async () => {
+    const file = tmpFile("tampered.jsonl");
+    const store = new FileStore(file);
+    await appendEvent(store, { type: "auth.login", metadata: { success: true } });
+    const original = fs.readFileSync(file, "utf8");
+    const forged = original.replace("auth.login", "auth.logout");
+    expect(forged).not.toBe(original);
+    fs.writeFileSync(file, forged);
+    await expect(appendEvent(store, { type: "another" })).rejects.toThrow(/Refusing to append/);
+    expect(fs.readFileSync(file, "utf8")).toBe(forged);
+  });
+
+  test("rejects malformed prior records when appending", async () => {
+    const file = tmpFile("invalid.jsonl");
+    const store = new FileStore(file);
+    await appendEvent(store, { type: "first" });
+    fs.appendFileSync(file, "not-json\n");
+    const snapshot = fs.readFileSync(file, "utf8");
+    await expect(appendEvent(store, { type: "second" })).rejects.toThrow(/invalid_json/);
+    expect(fs.readFileSync(file, "utf8")).toBe(snapshot);
+  });
+
+  test("malformed JSON value fails closed", async () => {
+    const file = tmpFile("primitive.jsonl");
+    fs.writeFileSync(file, "null\n");
+    const result = await verifyStore(new FileStore(file));
+    expect(result.ok).toBe(false);
+    expect(result.firstError?.reason).toBe("invalid_record");
+  });
+
+  test("genuinely new ledger starts at genesis", async () => {
+    const store = new FileStore(tmpFile("new.jsonl"));
+    await appendEvent(store, { type: "created" });
+    expect((await verifyStore(store)).ok).toBe(true);
+  });
+
+  test("symlinks are not accepted as audit files", async () => {
+    const target = tmpFile("target.jsonl");
+    fs.writeFileSync(target, "");
+    const link = target + ".link";
+    try { fs.symlinkSync(target, link); } catch { return; }
+    const store = new FileStore(link);
+    await expect(appendEvent(store, { type: "nope" })).rejects.toThrow(/regular file/);
+    await expect(verifyStore(store)).rejects.toThrow(/regular file/);
+  });
 });

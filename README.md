@@ -22,15 +22,18 @@ A tamper-evident (hash-chained) audit ledger for Node.js/TypeScript with optiona
 ## 📦 Installation
 
 ```bash
-npm i tamper-evident-audit-ledger
+npm install github:felipewatter/tamper-evident-audit-ledger
 ```
 
 Or, for local development:
 
 ```bash
 npm ci
+npm run lint
+npm run typecheck
 npm test
 npm run build
+npm pack --dry-run
 ```
 
 * * *
@@ -40,7 +43,7 @@ npm run build
 ### 1) Generate signing keys (recommended)
 
 ```bash
-npx audit-ledger init --out ./keys
+./node_modules/.bin/audit-ledger init --out ./keys
 ```
 
 This creates:
@@ -51,7 +54,7 @@ This creates:
 ### 2) Append an event
 
 ```bash
-npx audit-ledger append \
+./node_modules/.bin/audit-ledger append \
   --file ./audit.log \
   --type auth.login \
   --actor-id u1 \
@@ -65,7 +68,7 @@ npx audit-ledger append \
 ### 3) Verify integrity (and signatures)
 
 ```bash
-npx audit-ledger verify \
+./node_modules/.bin/audit-ledger verify \
   --file ./audit.log \
   --public-key ./keys/audit-ed25519-public.pem
 ```
@@ -73,7 +76,7 @@ npx audit-ledger verify \
 ### 4) Pretty print the last records
 
 ```bash
-npx audit-ledger pretty --file ./audit.log --tail 10
+./node_modules/.bin/audit-ledger pretty --file ./audit.log --tail 10
 ```
 
 * * *
@@ -116,7 +119,17 @@ Each record stores:
 - `hash`: `SHA256(canonical_json(record_payload))`
 - optional `sig`: `Ed25519_sign(hash_bytes)`
 
-If any record is edited, removed, inserted, or reordered (in the middle), verification fails.
+Edits, insertions and removals **inside** a chain can be detected. Without an
+externally anchored trusted final hash, deletion of the most recent records
+(truncation) can go undetected; periodically anchor checkpoints externally.
+
+**Fail-closed behavior:** verification rejects a missing audit file and invalid
+records. Appending refuses a pre-existing damaged chain, while an entirely new
+ledger may start from genesis. File-backed ledgers reject symlinks.
+
+**Single-writer requirement:** do not use multiple concurrent writers without
+external serialization. SHA-256 chains alone do not authenticate a writer;
+use Ed25519 signatures and verify against a trusted public key.
 
 * * *
 
