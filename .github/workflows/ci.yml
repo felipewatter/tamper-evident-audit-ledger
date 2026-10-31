@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  matrix_test:
     name: Node ${{ matrix.node }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -52,3 +52,20 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm audit --audit-level=high
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    needs: [matrix_test, audit]
+    if: ${{ always() }}
+    steps:
+      - name: Enforce full matrix and dependency audit success
+        run: |
+          if [ "${{ needs.matrix_test.result }}" != "success" ]; then
+            echo "Matrix checks failed or did not run"
+            exit 1
+          fi
+          if [ "${{ needs.audit.result }}" != "success" ]; then
+            echo "Dependency audit failed or did not run"
+            exit 1
+          fi
