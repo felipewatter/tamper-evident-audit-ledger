@@ -32,6 +32,14 @@ export async function appendEvent(
   event: AuditEvent,
   options: LedgerOptions = {}
 ): Promise<AuditRecord> {
+  // Never continue an already-corrupted chain.
+  // A genuinely new FileStore may start with the genesis hash.
+  if (!store.exists || (await store.exists())) {
+    const integrity = await verifyStore(store);
+    if (!integrity.ok) {
+      throw new Error(`Refusing to append to invalid ledger: ${integrity.firstError?.reason ?? "unknown_error"}`);
+    }
+  }
   const { lastIndex, lastHash } = await getLastRecordPointer(store);
 
   const index = lastIndex + 1;
@@ -68,6 +76,9 @@ export async function verifyStore(
   store: AppendOnlyStore,
   options: { publicKeyPem?: string } = {}
 ): Promise<VerifyResult> {
+  if (store.exists && !(await store.exists())) {
+    return { ok: false, total: 0, firstError: { index: 0, reason: "store_missing", line: "" } };
+  }
   let expectedPrevHash = GENESIS_HASH;
   let expectedIndex = 0;
 
@@ -75,12 +86,20 @@ export async function verifyStore(
 
   for await (const line of store.readAllLines()) {
     total += 1;
-    let parsed: AuditRecord;
-
+    let candidate: unknown;
     try {
-      parsed = JSON.parse(line) as AuditRecord;
+      candidate = JSON.parse(line);
     } catch {
       return fail(expectedIndex, "invalid_json", line, total);
+    }
+    if (candidate === null || typeof candidate !== "object" || Array.isArray(candidate)) {
+      return fail(expectedIndex, "invalid_record", line, total);
+    }
+    const parsed = candidate as AuditRecord;
+    if (!Number.isSafeInteger(parsed.index) || typeof parsed.ts !== "string" ||
+        !parsed.event || typeof parsed.event !== "object" || typeof parsed.event.type !== "string" ||
+        typeof parsed.prevHash !== "string" || typeof parsed.hash !== "string") {
+      return fail(expectedIndex, "invalid_record", line, total);
     }
 
     if (parsed.v !== 1) return fail(parsed.index, "unsupported_version", line, total);

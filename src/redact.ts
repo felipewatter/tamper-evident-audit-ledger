@@ -47,7 +47,7 @@ function walk(value: JsonValue, deny: Set<string>, options: RedactOptions): Json
   if (Array.isArray(value)) return value.map((v) => walk(v, deny, options));
   if (typeof value === "object") {
     const obj = value as Record<string, JsonValue>;
-    const out: Record<string, JsonValue> = {};
+    const out: Record<string, JsonValue> = Object.create(null);
     for (const [k, v] of Object.entries(obj)) {
       if (deny.has(k.toLowerCase())) {
         out[k] = options.hashValues ? hashAny(v, options.hashSalt) : "[REDACTED]";
