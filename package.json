@@ -1,6 +1,6 @@
 {
   "name": "tamper-evident-audit-ledger",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Tamper-evident (hash-chained) audit log for Node.js/TypeScript with optional Ed25519 signatures + CLI verifier.",
   "license": "MIT",
   "author": "Felipe Watter",
