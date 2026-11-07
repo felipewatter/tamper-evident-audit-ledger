@@ -1,0 +1,30 @@
+name: Temporary Commander 14 lock refresh
+on:
+  push:
+    branches: ['maintenance/commander14-node22-20261106']
+    paths:
+      - 'package.json'
+      - '.github/workflows/temp-commander-lock.yml'
+permissions:
+  contents: read
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Transfer deterministic generated lockfile
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+          if(lock.packages[''].dependencies.commander!=='^14.0.3' || lock.packages['node_modules/commander'].version!=='14.0.3')process.exit(1);
+          const data=fs.readFileSync('package-lock.json').toString('base64');
+          for(let i=0,j=0;i<data.length;i+=1400,j++)console.log('LOCKPART_'+String(j).padStart(5,'0')+'_'+data.slice(i,i+1400));
+          console.log('LOCKPART_END');
+          NODE
