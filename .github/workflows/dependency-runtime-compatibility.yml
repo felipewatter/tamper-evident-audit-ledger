@@ -1,0 +1,39 @@
+name: Node runtime compatibility after dev-tool upgrades
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/dependency-runtime-compatibility.yml'
+permissions:
+  contents: read
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.0.0', '22.12.0', '24']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Install locked dev tools and compile under supported build Node
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Smoke CLI and library under declared runtime
+        run: |
+          node --version
+          node --check dist/cli.js
+          node --check dist/index.js
+          node -e "require('./dist/index.js')"
+          node dist/cli.js --help
+          node dist/cli.js verify --help
